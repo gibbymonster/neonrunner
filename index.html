@@ -14,19 +14,40 @@ p{font-size:9px;line-height:1.9;text-align:center;margin:0;max-width:760px}
 </style></head><body>
 <canvas id="g" width="320" height="180"></canvas>
 <button id="fire">FIRE</button>
-<p>UP ARROW / TAP = JUMP &middot; DOWN ARROW / HOLD LOWER SCREEN = DUCK &middot; F / RIGHT ARROW / FIRE BUTTON = SHOOT THE BOSS &middot; P = PAUSE &middot; M = MUTE</p>
+<p>UP ARROW / TAP = JUMP &middot; DOWN ARROW / HOLD LOWER SCREEN = DUCK &middot; F / RIGHT ARROW / FIRE BUTTON = SHOOT THE BOSS &middot; P = PAUSE &middot; M = MUTE &middot; 25 COINS = EXTRA HEART</p>
 <script>
 const c=document.getElementById('g'),x=c.getContext('2d');x.imageSmoothingEnabled=false;
-const W=320,H=180,G=140,PX=44,ACC=['#00f0ff','#ff3df0','#39ff7a','#ffb02e','#7a5cff'],BC=['#ff3b3b','#b24dff','#2ee06a','#ffb02e','#3fa0ff'],CC=['#ff3b3b','#3fa0ff','#ffb02e','#b24dff','#2ee06a'];
-let st='ready',speed,dist,pts,streak,level,lvStart,boss,banner,pops,hp,py,vy,duck,touchDuck=false,touchFire=false,shield,magnet,inv,obs,cn,pw,pb,cd,spawnIn,coinIn,frame=0,scroll=0,hi=0,muted=false,shake=0,overT=0;
+const W=320,H=180,G=140,PX=44,COINS_PER_HEART=25,MAXHP=5,ACC=['#00f0ff','#ff3df0','#39ff7a','#ffb02e','#7a5cff'],BC=['#ff3b3b','#b24dff','#2ee06a','#ffb02e','#3fa0ff'],CC=['#ff3b3b','#3fa0ff','#ffb02e','#b24dff','#2ee06a'];
+let st='ready',speed,dist,pts,streak,level,lvStart,boss,banner,pops,hp,py,vy,duck,touchDuck=false,touchFire=false,shield,magnet,inv,obs,cn,pw,pb,cd,spawnIn,coinIn,coins,frame=0,scroll=0,hi=0,muted=false,shake=0,overT=0;
 const keys={down:false,fire:false};
 try{hi=+localStorage.getItem('nd_hi')||0}catch(e){}
 const R=(a,b,w,h,col)=>{x.fillStyle=col;x.fillRect(Math.round(a),Math.round(b),w,h)};
 const acc=()=>ACC[(level-1)%5],mu=()=>1+Math.min(4,(streak/5)|0),lvLen=()=>450+level*80,score=()=>Math.floor(pts);
 const ov=(a,b)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
 const hs=(a,b)=>{const n=Math.sin(a*127.1+b*311.7)*43758.5453;return n-Math.floor(n)};
-let ac;function beep(f,d,t='square',v=.04){if(muted)return;try{ac=ac||new(window.AudioContext||window.webkitAudioContext)();const o=ac.createOscillator(),g=ac.createGain();o.type=t;o.frequency.value=f;g.gain.value=v;o.connect(g);g.connect(ac.destination);o.start();g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d);o.stop(ac.currentTime+d)}catch(e){}}
-function reset(){speed=2.6;dist=0;pts=0;streak=0;level=1;lvStart=0;boss=null;banner={s:'LEVEL 1',t:120};pops=[];hp=3;py=G;vy=0;duck=false;shield=false;magnet=0;inv=0;obs=[];cn=[];pw=[];pb=[];cd=0;spawnIn=120;coinIn=70}
+let ac;
+function getAc(){try{ac=ac||new(window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume()}catch(e){}return ac}
+function beep(f,d,t='square',v=.04){if(muted)return;try{const a=getAc(),o=a.createOscillator(),g=a.createGain();o.type=t;o.frequency.value=f;g.gain.value=v;o.connect(g);g.connect(a.destination);o.start();g.gain.exponentialRampToValueAtTime(.001,a.currentTime+d);o.stop(a.currentTime+d)}catch(e){}}
+/* ---- background music: simple step sequencer ---- */
+const ROOTS=[110,87.31,98,82.41],ARP=[0,3,7,12,7,15,12,7];
+let mAt=0,mStep=0;
+function note(f,t,d,type,v){const o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.setValueAtTime(f,t);g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+d+.02)}
+function kick(t){const o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.setValueAtTime(140,t);o.frequency.exponentialRampToValueAtTime(40,t+.12);g.gain.setValueAtTime(.12,t);g.gain.exponentialRampToValueAtTime(.001,t+.15);o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+.17)}
+function musicTick(){
+ if(muted||st!=='play'){mAt=0;return}
+ if(!getAc())return;
+ const sd=60/(128+Math.min(7,level)*6)/2,boss_=!!boss;
+ if(mAt<ac.currentTime)mAt=ac.currentTime+.05;
+ while(mAt<ac.currentTime+.25){
+  const s=mStep%8,root=ROOTS[((mStep/8)|0)%4];
+  note(root*(s%2?2:1),mAt,sd*.9,boss_?'sawtooth':'triangle',.07);
+  note(root*2*Math.pow(2,ARP[s]/12),mAt,sd*.7,'square',.018);
+  if(s%4===0)kick(mAt);
+  if(s%2===1)note(7000,mAt,.03,'square',.006);
+  mAt+=sd;mStep++;
+ }
+}
+function reset(){speed=2.6;dist=0;pts=0;streak=0;level=1;lvStart=0;boss=null;banner={s:'LEVEL 1',t:120};pops=[];hp=3;coins=0;py=G;vy=0;duck=false;shield=false;magnet=0;inv=0;obs=[];cn=[];pw=[];pb=[];cd=0;spawnIn=120;coinIn=70;mStep=0;mAt=0}
 reset();
 const pop=(s,col)=>pops.push({s,x:PX,y:py-34,t:50,c:col});
 function start(){reset();st='play'}
@@ -89,7 +110,13 @@ function update(d){
  for(const k of cn){
   k.x-=speed*d;
   if(magnet>0){const dx=cx-k.x,dy=cy-k.y,m=Math.hypot(dx,dy);if(m<80&&m>1){k.x+=dx/m*3*d;k.y+=dy/m*3*d}}
-  if(Math.hypot(k.x-cx,k.y-cy)<10){k.d=1;streak++;pts+=10*mu();beep(880,.08)}
+  if(Math.hypot(k.x-cx,k.y-cy)<10){
+   k.d=1;streak++;pts+=10*mu();beep(880,.08);coins++;
+   if(coins%COINS_PER_HEART===0){
+    if(hp<MAXHP){hp++;pop('EXTRA HEART!','#ff3b6b')}else{pts+=100;pop('+100','#ffd23f')}
+    beep(1040,.12,'triangle',.05);setTimeout(()=>beep(1320,.18,'triangle',.05),110);
+   }
+  }
  }
  cn=cn.filter(k=>!k.d&&k.x>-20);
  for(const p of pw){
@@ -214,7 +241,9 @@ function draw(){
  if(magnet>0)T('MAGNET '+Math.ceil(magnet/60),shield?64:6,36,8,'#ff9f1c');
  T('LEVEL '+level,W/2,12,8,a,'center');
  T('HI '+String(hi).padStart(5,'0'),W-6,12,8,'#fff','right');
- for(let i=0;i<hp;i++){const hx=W-32+i*9,hy=17,hc='#ff3b6b';R(hx,hy,2,2,hc);R(hx+3,hy,2,2,hc);R(hx,hy+1,5,2,hc);R(hx+1,hy+3,3,1,hc);R(hx+2,hy+4,1,1,hc)}
+ for(let i=0;i<hp;i++){const hx=W-6-hp*9+i*9+3,hy=17,hc='#ff3b6b';R(hx,hy,2,2,hc);R(hx+3,hy,2,2,hc);R(hx,hy+1,5,2,hc);R(hx+1,hy+3,3,1,hc);R(hx+2,hy+4,1,1,hc)}
+ T('COINS '+coins,W-6,32,8,'#ffd23f','right');
+ if(muted)T('MUTED',W-6,44,8,'#8a8aa8','right');
  if(boss&&!boss.dead){R(110,18,100,5,'#222');R(111,19,98*boss.hp/boss.max,3,'#ff3b3b');T('BOSS',W/2,32,8,'#ff3b3b','center');if(boss.hp===boss.max)T('F / FIRE = SHOOT!',W/2,44,8,'#ffec3d','center')}
  if(banner&&banner.t>0){x.globalAlpha=Math.min(1,banner.t/20);T(banner.s,W/2,70,16,banner.c||a,'center');x.globalAlpha=1}
  if(st==='ready'){T('NEON RUNNER',W/2,70,16,a,'center');T('PRESS UP OR TAP TO START',W/2,92,8,'#fff','center');T('UP = JUMP   DOWN = DUCK',W/2,108,8,'#aaa','center');T('F = SHOOT THE BOSS',W/2,122,8,'#aaa','center')}
@@ -229,6 +258,7 @@ function loop(t){
  if(st==='play')update(d);
  else if(st==='ready')scroll+=1.2*d;
  else if(st==='over'){overT-=d;if(shake>0)shake-=.7*d}
+ musicTick();
  draw();requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
