@@ -196,7 +196,7 @@ function drawCar(o){
  R(o.x+3,o.y+o.h-3,4,3,'#111');R(o.x+o.w-7,o.y+o.h-3,4,3,'#111');
 }
 function drawBird(o){
- const up=((frame/8)|0)%2,B='#8b5a2b';
+ const up=((frame/8)|0)%2,B='#deded8';
  R(o.x+3,o.y+3,8,4,B);R(o.x,o.y+2,4,4,B);R(o.x-3,o.y+3,3,2,'#ffd23f');R(o.x+1,o.y+3,1,1,'#111');R(o.x+11,o.y+4,3,2,'#5a3a1a');
  if(up){R(o.x+5,o.y-3,5,4,'#c8a165');R(o.x+7,o.y-4,3,2,'#c8a165')}else{R(o.x+5,o.y+7,5,3,'#c8a165');R(o.x+7,o.y+9,3,2,'#c8a165')}
 }
