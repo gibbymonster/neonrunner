@@ -149,8 +149,8 @@ function openCheat(){
 function closeCheat(){if(st!=='cheat')return;chEl.hidden=true;chIn.blur();st=cheatPrev}
 function nextLevel(){level++;lvStart=dist;boss=null;obs=[];banner={s:'LEVEL '+level,t:120};spawnIn=120;coinIn=70}
 const CHEATS={
-  SPEED(){speedBoost=10;pop('SPEED x10!','#ff3b6b');return'SPEED x10 ON'},
- TANK(){if(tank>0){tank=0;inv=60;return'TANK OFF'}tank=Infinity;inv=0;pop('TANK MODE!','#7dff4a');return'TANK ON (UNTIL NEW GAME)'},
+ SPEED(){speedBoost=10;pop('SPEED x10!','#ff3b6b');return'SPEED x10 ON'},
+ TANK(){if(tank>0){tank=0;inv=60;return'TANK OFF'}tank=Infinity;inv=0;pop('TANK MODE!','#7dff4a');return'TANK ON'},
  HEALTH(){hp=MAXHP;pop('FULL HEALTH!','#ff3b6b');return'HEARTS REFILLED'},
  SHIELD(){shield=true;return'SHIELD ON'},
  MAGNET(){magnet=1800;return'MAGNET 30 SEC'},
